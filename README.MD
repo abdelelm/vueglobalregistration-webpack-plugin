@@ -172,7 +172,7 @@ Like you see , it generate also a name based on the path of your component. but 
 
 ## Notice
 
-- You have to know that the order of folder will be important if you use the same name or folder
+- You have to know that the order of folder will be important if you use the same route
 - Folder starting with a `@` will  not be added to name of routes
 - Files starting with `_` will be skipped  	
  

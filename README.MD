@@ -89,7 +89,7 @@ If you have a folder structure like this :
    │    ├── logout.vue
    │    └── view_id_user.vue
    └── @public
-   		├── notfound
+   	├── notfound
         │    └── _index.vue
         ├── aboutme.vue
         ├── conditions.vue
@@ -168,7 +168,7 @@ This is the generate code based on the example folder structure:
    routes.push({ path: '/info/:id', meta : {},  component: ROUT6 })
 ``` 
 
-Like you see , it generate also a name based on the path of your component. but if the component has a name attribute it will take the name attribute to register the component.
+Like you see , it generate a name based on the path of your component.
 
 ## Notice
 

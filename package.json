@@ -1,6 +1,6 @@
 {
   "name": "vueglobalregistration-webpack-plugin",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Register globally components with name based on folder and generate routing based on folder and filename",
   "main": "index.js",
   "author": "AbdelElm",
@@ -10,6 +10,7 @@
     "url": "https://github.com/abdelelm/vueglobalregistration-webpack-plugin"
   },
   "dependencies": {
+    "chokidar": "^2.0.4",
     "fs": "0.0.1-security",
     "loader-utils": "^1.1.0",
     "path": "^0.12.7"

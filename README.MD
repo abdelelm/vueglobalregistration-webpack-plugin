@@ -1,4 +1,3 @@
-
 # VueGlobalRegistration ![CI status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
 Register globally components with name based on folder and generate routing based on folder and filename
@@ -27,13 +26,28 @@ You will need to add in the rules of your module key in your webpack configurati
    {
         enforce: "pre",
         test: /app.js/,
-        loader: VueGlobalRegistration.Register({
+        loader: 'vueglobalregistration-webpack-plugin',
+        options: {
             type: "component",
             folder :  __dirname +  "/../src/components",
             recursive : true
+        }
+   }
+```
+
+If you want to add some `regular expressions` to your options config, webpack will not be able to serialize them correctly. You will need to provide their source like this `/test.vue/.source` or use our `Register` method which will automatically parse regular expressions.
+```js
+   {
+        enforce: "pre",
+        test: /app.js/,
+        loader: VueGlobalRegistration.Register({
+            type: "routing",
+            folder :  __dirname +  "/../src/components",
+            recursive : true,
+            test: /index.vue/ //Will only accept index.vue files instead of all detected .vue files
         })
-    }
-``` 
+   }
+```
 ### Result
 When the type is `component` it will generate based on your folder structure the code to register the component. It will inject the code in the file (here it will be the `app.js`)
 
@@ -63,7 +77,8 @@ webpack.config.js
         test: /app.js/,
         loader: VueGlobalRegistration.Register({
             type: "component",
-            replace : "//<component>"
+            //importPrefix: 'COMP', optionaly replace the default used prefix (for instance when multiple loaders are used)
+            replace : "//<component>",
             folder :  __dirname +  "/../src/components",
             recursive : true
         })

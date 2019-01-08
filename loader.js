@@ -4,7 +4,6 @@
 */
 const path = require("path")
 var loaderUtils = require("loader-utils");
-var VueGlobalRegistration = require('./index.js');
 var chokidar = require('chokidar');
 const fs = require("fs");
 var RunWatch = function (directory, file) {
@@ -60,7 +59,7 @@ var walkSync = function (dir, ext, base, rec) {
 };
 
 function GetComponentPath(file, separator) {
-    var name = file.name.substr(1).replace(/\//g, separator || "-").replace(".vue", "");
+    var name = file.name.substr(1).replace(/\//g, separator || "-").replace(/@/g, "").replace(".vue", "");
     if (file.file === "index.vue")
         name = name.replace("-index", "");
     return name;
@@ -87,92 +86,102 @@ function GetRouterPath(file) {
     return name;
 }
 
-module.exports = function (source, map) {
+module.exports = function loader(source, map) {
     var callback = this.async();
-    var id = loaderUtils.parseQuery(this.query).id;
-    var source = source;
-    var registerReplaceOptions = VueGlobalRegistration.RegistrationOptions;
-    if (!registerReplaceOptions.hasOwnProperty(id)) {
-        this.emitWarning('no registration options found for id ' + id);
-    } else {
-        var options = registerReplaceOptions[id];
+    var options = loaderUtils.getOptions(this) || {};
 
-        if (typeof source === "string") {
-
-            var file = [],
-                index_comp = 1,
-                index_route = 1;
-            var setResult = (result) => {
-                if (options.replace)
-                    source = source.replace(options.replace, result)
-                else
-                    source = file.join("\n");
-            }
-            if (options.replace && source.indexOf(options.replace) == -1)
-                return callback(null, source, map);
-            RunWatch.apply(this, [options.folder, this._module.resource]);
-            if (!options.replace) {
-                file = source.split("\n");
-                for (var i in file) {
-                    var x = file[i];
-                    if (x.indexOf("import") == 0) {
-                        ++index_comp;
-                    }
-                    if (x.indexOf("routes") > 0)
-                        ++index_route;
-                }
-            }
-
-
-            if (options) {
-                var list = walkSync(path.resolve(options.folder.replace(/\\/g, "/")), ".vue", null, !(options.recursive == false));
-                var imports = [];
-                var inject = [];
-
-                if (options.type === "routing") {
-                    var variable = options.array || "routes"
-                    var imp = 'import ROUT${ctr} from "${path}";',
-                        toadd = variable + ".push({ path: '${name}', meta : ${meta},  component: ROUT${ctr} })";
-
-                    for (var i in list) {
-                        var el = list[i];
-                        var meta = (options.rules || []).find(obj => obj.test.test(el.fullpath)) || {
-                            meta: {}
-                        };
-                        imports.push(imp.replace("${ctr}", i).replace("${path}", el.fullpath))
-                        inject.push(toadd.replace("${ctr}", i)
-                            .replace("${meta}", JSON.stringify(meta.meta))
-                            .replace("${name}", GetRouterPath(el)))
-                    }
-                    if (!options.replace)
-                        file.splice(index_route, 0, imports.concat(inject).join("\n"))
-
-                } else if (options.type === "component") {
-                    var imp = 'import COMP${ctr} from "${path}";',
-                        toadd = "Vue.component(COMP${ctr}.name || '${name}' ,  COMP${ctr})"
-
-                    for (var i in list) {
-                        var el = list[i];
-                        imports.push(imp.replace("${ctr}", i).replace("${path}", el.fullpath))
-                        inject.push(toadd.replace("${ctr}", i)
-                            .replace("${ctr}", i)
-                            .replace("${name}", GetComponentPath(el, options.separator)))
-                    }
-                    if (!options.replace)
-                        file.splice(index_comp, 0, imports.concat(inject).join("\n"))
-                }
-
-                setResult(imports.concat(inject).join("\n"))
-
-
-            }
-
-
-        } else {
-            this.emitWarning("'source' received by loader was not a string");
+    if (typeof source === "string") {
+        var file = [],
+            index_comp = 1,
+            index_route = 1;
+        var setResult = (result) => {
+            if (options.replace)
+                source = source.replace(options.replace, result)
+            else
+                source = file.join("\n");
         }
+        if (options.replace && source.indexOf(options.replace) == -1)
+            return callback(null, source, map);
+
+        if (this._module)
+            RunWatch.apply(this, [options.folder, this._module.resource]);
+
+        if (!options.replace) {
+            file = source.split("\n");
+            for (var i in file) {
+                var x = file[i];
+                if (x.indexOf("import") == 0) {
+                    ++index_comp;
+                }
+                if (x.indexOf("routes") > 0)
+                    ++index_route;
+            }
+        }
+
+        if (options) {
+            var list = walkSync(path.resolve(options.folder.replace(/\\/g, "/")), ".vue", null, !(options.recursive == false));
+            var imports = [];
+            var inject = [];
+
+            if (options.test) {
+                if (typeof (options.test) === "string")
+                    options.test = new RegExp(options.test);
+
+                if (typeof (options.test) !== "object" || !options.test.test)
+                    throw new Error("Unknown test value provided")
+
+                list = list.filter((r) => {
+                    return options.test.test(r.name);
+                })
+            }
+
+            if (options.rules) {
+                for (const rule of options.rules) {
+                    if (rule.test && typeof (rule.test) === "string")
+                        rule.test = new RegExp(rule.test);
+                }
+            }
+
+            if (options.type === "routing") {
+                var variable = options.array || "routes"
+                var imp = 'import ROUT${ctr} from "${path}";',
+                    toadd = variable + ".push({ path: '${name}', meta : ${meta},  component: ROUT${ctr} })";
+
+                for (var i in list) {
+                    var el = list[i];
+                    var meta = (options.rules || []).find(obj => obj.test.test(el.fullpath)) || {
+                        meta: {}
+                    };
+                    imports.push(imp.replace("${ctr}", i).replace("${path}", el.fullpath))
+                    inject.push(toadd.replace("${ctr}", i)
+                        .replace("${meta}", JSON.stringify(meta.meta))
+                        .replace("${name}", GetRouterPath(el)))
+                }
+                if (!options.replace)
+                    file.splice(index_route, 0, imports.concat(inject).join("\n"))
+
+            } else if (options.type === "component") {
+                const prefix = options.importPrefix || 'COMP';
+                var imp = 'import ' + prefix + '${ctr} from "${path}";',
+                    toadd = "Vue.component(" + prefix + "${ctr}.name || '${name}' ,  " + prefix + "${ctr})"
+
+                for (var i in list) {
+                    var el = list[i];
+                    imports.push(imp.replace("${ctr}", i).replace("${path}", el.fullpath))
+                    inject.push(toadd.replace("${ctr}", i)
+                        .replace("${ctr}", i)
+                        .replace("${name}", GetComponentPath(el, options.separator)))
+                }
+                if (!options.replace)
+                    file.splice(index_comp, 0, imports.concat(inject).join("\n"))
+            }
+
+            setResult(imports.concat(inject).join("\n"))
+        }
+    } else {
+        this.emitWarning("'source' received by loader was not a string");
     }
 
     this.cacheable && this.cacheable();
     callback(null, source, map);
-};
+}

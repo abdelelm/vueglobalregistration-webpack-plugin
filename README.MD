@@ -60,7 +60,7 @@ This is the generate code based on the example folder structure:
    Vue.component(COMP0.name || 'form' ,  COMP0)
    Vue.component(COMP1.name || 'form-test' ,  COMP1)
    Vue.component(COMP2.name || 'navigation' ,  COMP2)
-   Vue.component(COMP4.name || 'navigation-test' ,  COMP3)
+   Vue.component(COMP3.name || 'navigation-test' ,  COMP3)
 ``` 
 
 Like you see , it generate also a name based on the path of your component. but if the component has a name attribute it will take the name attribute to register the component.
